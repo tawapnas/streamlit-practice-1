@@ -18,7 +18,7 @@ def format_seconds(total_seconds: int) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
-st.title("⏱️ Timer App")
+st.title("⏱️ Timer App for Streamlit")
 
 with st.form("timer_form"):
     col1, col2 = st.columns(2)
@@ -37,7 +37,7 @@ if submitted:
         st.session_state.timer_running = False
         st.session_state.end_time = None
 
-if st.button("Reset"):
+if st.button("Reset Timer"):
     st.session_state.timer_running = False
     st.session_state.end_time = None
 
