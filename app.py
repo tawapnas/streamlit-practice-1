@@ -73,17 +73,6 @@ if submitted:
         st.session_state.end_time = None
         st.session_state.count_up_started_at = time.time()
 
-st.markdown("### Quick countdown presets")
-preset_cols = st.columns(3)
-for idx, minutes in enumerate((3, 5, 10)):
-    with preset_cols[idx]:
-        if st.button(f"{minutes} min", key=f"preset_{minutes}_minutes"):
-            st.session_state.mode = MODE_COUNTDOWN
-            st.session_state.countdown_duration = minutes * 60
-            st.session_state.end_time = time.time() + (minutes * 60)
-            st.session_state.timer_running = True
-            st.session_state.count_up_started_at = None
-
 if st.button("Reset Timer"):
     st.session_state.timer_running = False
     st.session_state.end_time = None
