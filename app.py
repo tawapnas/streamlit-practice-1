@@ -1,4 +1,6 @@
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -7,6 +9,16 @@ st.set_page_config(page_title="Timer App", page_icon="⏱️")
 MODE_COUNTDOWN = "Countdown"
 MODE_COUNT_UP = "Count up"
 TIMER_THEMES = ["Classic", "Neon", "Sunset"]
+TIMEZONE_OPTIONS = [
+    "UTC",
+    "Asia/Bangkok",
+    "Asia/Singapore",
+    "Asia/Tokyo",
+    "Europe/London",
+    "America/New_York",
+    "America/Los_Angeles",
+    "Australia/Sydney",
+]
 
 THEME_COLORS = {
     "Classic": {"accent": "#4f46e5", "background": "#eef2ff", "surface": "#ffffff"},
@@ -32,6 +44,8 @@ if "paused_elapsed" not in st.session_state:
     st.session_state.paused_elapsed = 0
 if "theme" not in st.session_state:
     st.session_state.theme = TIMER_THEMES[0]
+if "timezone" not in st.session_state:
+    st.session_state.timezone = "UTC"
 
 
 def get_total_seconds(minutes: int, seconds: int) -> int:
@@ -59,7 +73,7 @@ def reset_timer_state() -> None:
 
 def get_timer_message(remaining_seconds: int, total_seconds: int) -> str:
     if total_seconds <= 0:
-        return "Ready, set, go\!"
+        return "Ready, set, go!"
     if remaining_seconds <= 0:
         return "Time to celebrate"
     progress = 1 - (remaining_seconds / total_seconds)
@@ -72,6 +86,10 @@ def get_timer_message(remaining_seconds: int, total_seconds: int) -> str:
     return "Nice start"
 
 
+def get_current_time_in_timezone(timezone_name: str) -> datetime:
+    return datetime.now(ZoneInfo(timezone_name))
+
+
 st.title("⏱️ Timer App for Streamlit")
 
 selected_theme = st.selectbox(
@@ -82,6 +100,21 @@ selected_theme = st.selectbox(
 )
 st.session_state.theme = selected_theme
 current_theme = THEME_COLORS.get(selected_theme, THEME_COLORS["Classic"])
+
+selected_timezone = st.selectbox(
+    "Display timezone",
+    TIMEZONE_OPTIONS,
+    index=TIMEZONE_OPTIONS.index(st.session_state.timezone),
+    key="timezone",
+)
+st.session_state.timezone = selected_timezone
+
+now_in_timezone = get_current_time_in_timezone(st.session_state.timezone)
+st.caption(
+    f"Current time in {st.session_state.timezone}: "
+    f"{now_in_timezone.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+)
+
 st.markdown(
     f"""
     <style>
@@ -104,7 +137,7 @@ selected_mode = st.selectbox(
     index=mode_options.index(st.session_state.mode),
 )
 
-if selected_mode \!= st.session_state.mode:
+if selected_mode != st.session_state.mode:
     st.session_state.mode = selected_mode
     reset_timer_state()
     st.session_state.countdown_duration = 0
@@ -195,7 +228,7 @@ if st.session_state.timer_running:
             st.session_state.timer_paused = False
             st.session_state.end_time = None
             st.balloons()
-            st.success("Time is up\! 🎉")
+            st.success("Time is up! 🎉")
         else:
             time.sleep(0.2)
             st.rerun()
@@ -214,8 +247,7 @@ else:
     else:
         remaining = st.session_state.paused_remaining if st.session_state.timer_paused else st.session_state.countdown_duration
         if st.session_state.countdown_duration <= 0:
-            default_seconds = get_total_seconds(minutes, seconds) if "minutes" in locals() and "seconds" in locals() else 60
-            remaining = default_seconds
+            remaining = 60
         st.metric("Remaining time", format_seconds(remaining))
         st.progress(0.0)
         if st.session_state.timer_paused:
