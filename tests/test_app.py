@@ -19,3 +19,15 @@ def test_get_timer_message_uses_milestones():
 def test_get_timer_theme_has_style_names():
     assert "Classic" in app.TIMER_THEMES
     assert "Neon" in app.TIMER_THEMES
+
+
+def test_accessibility_options_are_defined():
+    assert "Light" in app.THEME_MODES
+    assert "Dark" in app.THEME_MODES
+    assert app.MIN_FONT_SCALE < app.DEFAULT_FONT_SCALE < app.MAX_FONT_SCALE
+
+
+def test_font_scale_is_clamped():
+    assert app.clamp_font_scale(0.5) == app.MIN_FONT_SCALE
+    assert app.clamp_font_scale(1.8) == app.MAX_FONT_SCALE
+    assert app.clamp_font_scale(1.2) == 1.2

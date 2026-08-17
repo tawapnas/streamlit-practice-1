@@ -25,6 +25,10 @@ THEME_COLORS = {
     "Neon": {"accent": "#22d3ee", "background": "#0f172a", "surface": "#111827"},
     "Sunset": {"accent": "#f97316", "background": "#fff7ed", "surface": "#fff5f0"},
 }
+THEME_MODES = ["Light", "Dark"]
+MIN_FONT_SCALE = 0.8
+MAX_FONT_SCALE = 1.6
+DEFAULT_FONT_SCALE = 1.0
 
 if "timer_running" not in st.session_state:
     st.session_state.timer_running = False
@@ -44,12 +48,21 @@ if "paused_elapsed" not in st.session_state:
     st.session_state.paused_elapsed = 0
 if "theme" not in st.session_state:
     st.session_state.theme = TIMER_THEMES[0]
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = THEME_MODES[0]
+if "font_scale" not in st.session_state:
+    st.session_state.font_scale = DEFAULT_FONT_SCALE
 if "timezone" not in st.session_state:
     st.session_state.timezone = "UTC"
 
 
 def get_total_seconds(minutes: int, seconds: int) -> int:
     return minutes * 60 + seconds
+
+
+def clamp_font_scale(value: float) -> float:
+    numeric_value = float(value)
+    return min(MAX_FONT_SCALE, max(MIN_FONT_SCALE, numeric_value))
 
 
 def format_seconds(total_seconds: int) -> str:
@@ -92,6 +105,27 @@ def get_current_time_in_timezone(timezone_name: str) -> datetime:
 
 st.title("⏱️ Timer App for Streamlit")
 
+app_theme = st.radio(
+    "App appearance",
+    THEME_MODES,
+    index=THEME_MODES.index(st.session_state.theme_mode),
+    horizontal=True,
+    key="theme_mode",
+)
+st.session_state.theme_mode = app_theme
+
+font_controls = st.columns([1, 1, 2])
+with font_controls[0]:
+    if st.button("A−", key="decrease_font", use_container_width=True):
+        st.session_state.font_scale = clamp_font_scale(st.session_state.font_scale - 0.1)
+with font_controls[1]:
+    if st.button("A+", key="increase_font", use_container_width=True):
+        st.session_state.font_scale = clamp_font_scale(st.session_state.font_scale + 0.1)
+with font_controls[2]:
+    st.caption(f"Font size: {st.session_state.font_scale:.1f}x")
+
+st.session_state.font_scale = clamp_font_scale(st.session_state.font_scale)
+
 selected_theme = st.selectbox(
     "Timer vibe",
     TIMER_THEMES,
@@ -115,15 +149,39 @@ st.caption(
     f"{now_in_timezone.strftime('%Y-%m-%d %H:%M:%S %Z')}"
 )
 
+app_background = "#0f172a" if app_theme == "Dark" else "#f8fafc"
+app_surface = "#111827" if app_theme == "Dark" else "#ffffff"
+app_text = "#e2e8f0" if app_theme == "Dark" else "#0f172a"
+app_muted = "#cbd5e1" if app_theme == "Dark" else "#475569"
+
 st.markdown(
     f"""
     <style>
+    :root {{
+        --app-font-scale: {st.session_state.font_scale};
+    }}
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
+        background: {app_background};
+        color: {app_text};
+    }}
+    .stApp, .stMarkdown, .stCaption, .stSelectbox, .stNumberInput, .stButton > button {{
+        font-size: calc(1rem * var(--app-font-scale));
+    }}
+    .stApp div[data-testid="stVerticalBlock"] {{
+        color: {app_text};
+    }}
     div[data-testid="stMetricValue"] {{
         color: {current_theme['accent']};
         font-weight: 700;
     }}
     div[data-testid="stProgressBar"] > div > div {{
         background: linear-gradient(90deg, {current_theme['accent']}, #facc15);
+    }}
+    .stAlert, .stInfo, .stWarning, .stSuccess {{
+        border-radius: 0.75rem;
+    }}
+    .stButton > button {{
+        border-radius: 999px;
     }}
     </style>
     """,
