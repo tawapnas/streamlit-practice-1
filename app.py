@@ -68,6 +68,8 @@ if "font_scale" not in st.session_state:
     st.session_state.font_scale = DEFAULT_FONT_SCALE
 if "timezone" not in st.session_state:
     st.session_state.timezone = "UTC"
+if "scratchpad_note" not in st.session_state:
+    st.session_state.scratchpad_note = ""
 
 
 def get_total_seconds(minutes: int, seconds: int) -> int:
@@ -324,5 +326,18 @@ else:
         st.progress(0.0)
         if st.session_state.timer_paused:
             st.warning("Timer paused. Hit resume when you're ready.")
+
+st.subheader("📝 Scratchpad")
+notes_col, clear_col = st.columns([5, 1])
+with notes_col:
+    st.text_area(
+        "Quick note",
+        key="scratchpad_note",
+        height=150,
+        placeholder="Jot a short note here...",
+    )
+with clear_col:
+    if st.button("Clear", use_container_width=True):
+        st.session_state.scratchpad_note = ""
 
 st.caption("Use the timer to count down from a chosen duration, switch to stopwatch mode, and enjoy a little extra personality while you focus.")
