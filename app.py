@@ -8,7 +8,16 @@ st.set_page_config(page_title="Timer App", page_icon="⏱️")
 
 MODE_COUNTDOWN = "Countdown"
 MODE_COUNT_UP = "Count up"
-TIMER_THEMES = ["Classic", "Neon", "Sunset"]
+TIMER_THEMES = [
+    "Classic",
+    "Neon",
+    "Sunset",
+    "Forest",
+    "Ocean",
+    "Lavender",
+    "Rose",
+    "Midnight",
+]
 TIMEZONE_OPTIONS = [
     "UTC",
     "Asia/Bangkok",
@@ -24,6 +33,11 @@ THEME_COLORS = {
     "Classic": {"accent": "#4f46e5", "background": "#eef2ff", "surface": "#ffffff"},
     "Neon": {"accent": "#22d3ee", "background": "#0f172a", "surface": "#111827"},
     "Sunset": {"accent": "#f97316", "background": "#fff7ed", "surface": "#fff5f0"},
+    "Forest": {"accent": "#10b981", "background": "#ecfdf5", "surface": "#f0fdf4"},
+    "Ocean": {"accent": "#0ea5e9", "background": "#eff6ff", "surface": "#f8fbff"},
+    "Lavender": {"accent": "#8b5cf6", "background": "#f5f3ff", "surface": "#faf5ff"},
+    "Rose": {"accent": "#ec4899", "background": "#fff1f2", "surface": "#fff7f8"},
+    "Midnight": {"accent": "#a78bfa", "background": "#111827", "surface": "#1f2937"},
 }
 THEME_MODES = ["Light", "Dark"]
 MIN_FONT_SCALE = 0.8
