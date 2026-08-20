@@ -89,6 +89,8 @@ if "timezone" not in st.session_state:
     st.session_state.timezone = "UTC"
 if "scratchpad_note" not in st.session_state:
     st.session_state.scratchpad_note = ""
+if "todo_items" not in st.session_state:
+    st.session_state.todo_items = []
 
 
 def get_total_seconds(minutes: int, seconds: int) -> int:
@@ -153,6 +155,13 @@ def advance_pomodoro_phase() -> None:
 
 def get_current_time_in_timezone(timezone_name: str) -> datetime:
     return datetime.now(ZoneInfo(timezone_name))
+
+
+def add_todo_item() -> None:
+    todo_text = st.session_state.todo_input.strip()
+    if todo_text:
+        st.session_state.todo_items.append({"text": todo_text, "done": False})
+        st.session_state.todo_input = ""
 
 
 st.title("⏱️ Timer App for Streamlit")
@@ -450,5 +459,24 @@ with notes_col:
 with clear_col:
     if st.button("Clear", use_container_width=True):
         st.session_state.scratchpad_note = ""
+
+st.subheader("✅ Todo list")
+todo_col, add_col = st.columns([5, 1])
+with todo_col:
+    st.text_input("New todo", key="todo_input", placeholder="Add a task...")
+with add_col:
+    st.button("Add", use_container_width=True, on_click=add_todo_item)
+
+if st.session_state.todo_items:
+    for todo_index, todo in enumerate(st.session_state.todo_items):
+        todo["done"] = st.checkbox(
+            todo["text"],
+            value=todo["done"],
+            key=f"todo_item_{todo_index}",
+        )
+    if st.button("Clear completed todos"):
+        st.session_state.todo_items = [
+            todo for todo in st.session_state.todo_items if not todo["done"]
+        ]
 
 st.caption("Use the timer to count down from a chosen duration, switch to stopwatch mode, and enjoy a little extra personality while you focus.")
