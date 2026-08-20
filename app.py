@@ -8,6 +8,11 @@ st.set_page_config(page_title="Timer App", page_icon="⏱️")
 
 MODE_COUNTDOWN = "Countdown"
 MODE_COUNT_UP = "Count up"
+MODE_POMODORO = "Pomodoro"
+POMODORO_WORK = "Work"
+POMODORO_BREAK = "Break"
+DEFAULT_POMODORO_WORK_MINUTES = 25
+DEFAULT_POMODORO_BREAK_MINUTES = 5
 TIMER_THEMES = [
     "Classic",
     "Neon",
@@ -60,6 +65,14 @@ if "paused_remaining" not in st.session_state:
     st.session_state.paused_remaining = 0
 if "paused_elapsed" not in st.session_state:
     st.session_state.paused_elapsed = 0
+if "pomodoro_phase" not in st.session_state:
+    st.session_state.pomodoro_phase = POMODORO_WORK
+if "pomodoro_round" not in st.session_state:
+    st.session_state.pomodoro_round = 1
+if "pomodoro_work_duration" not in st.session_state:
+    st.session_state.pomodoro_work_duration = DEFAULT_POMODORO_WORK_MINUTES * 60
+if "pomodoro_break_duration" not in st.session_state:
+    st.session_state.pomodoro_break_duration = DEFAULT_POMODORO_BREAK_MINUTES * 60
 if "theme" not in st.session_state:
     st.session_state.theme = TIMER_THEMES[0]
 if "theme_mode" not in st.session_state:
@@ -98,6 +111,8 @@ def reset_timer_state() -> None:
     st.session_state.countdown_duration = 0
     st.session_state.paused_remaining = 0
     st.session_state.paused_elapsed = 0
+    st.session_state.pomodoro_phase = POMODORO_WORK
+    st.session_state.pomodoro_round = 1
 
 
 def get_timer_message(remaining_seconds: int, total_seconds: int) -> str:
@@ -204,7 +219,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-mode_options = [MODE_COUNTDOWN, MODE_COUNT_UP]
+mode_options = [MODE_COUNTDOWN, MODE_COUNT_UP, MODE_POMODORO]
 selected_mode = st.selectbox(
     "Timer mode",
     mode_options,
@@ -219,16 +234,35 @@ if selected_mode != st.session_state.mode:
 with st.form("timer_form"):
     col1, col2 = st.columns(2)
     with col1:
-        minutes = st.number_input("Minutes", min_value=0, max_value=120, value=1, step=1)
+        minutes = st.number_input(
+            "Work minutes" if st.session_state.mode == MODE_POMODORO else "Minutes",
+            min_value=0,
+            max_value=120,
+            value=DEFAULT_POMODORO_WORK_MINUTES if st.session_state.mode == MODE_POMODORO else 1,
+            step=1,
+        )
     with col2:
-        seconds = st.number_input("Seconds", min_value=0, max_value=59, value=0, step=1)
+        seconds = st.number_input(
+            "Break minutes" if st.session_state.mode == MODE_POMODORO else "Seconds",
+            min_value=0,
+            max_value=59 if st.session_state.mode != MODE_POMODORO else 60,
+            value=0 if st.session_state.mode != MODE_POMODORO else DEFAULT_POMODORO_BREAK_MINUTES,
+            step=1,
+        )
     submitted = st.form_submit_button("Set timer")
 
 if submitted:
-    total_seconds = get_total_seconds(minutes, seconds)
+    if st.session_state.mode == MODE_POMODORO:
+        st.session_state.pomodoro_phase = POMODORO_WORK
+        st.session_state.pomodoro_round = 1
+        total_seconds = get_total_seconds(minutes, 0)
+        st.session_state.pomodoro_work_duration = total_seconds
+        st.session_state.pomodoro_break_duration = get_total_seconds(seconds, 0)
+    else:
+        total_seconds = get_total_seconds(minutes, seconds)
     st.session_state.countdown_duration = total_seconds
 
-    if st.session_state.mode == MODE_COUNTDOWN:
+    if st.session_state.mode in (MODE_COUNTDOWN, MODE_POMODORO):
         if total_seconds > 0:
             st.session_state.end_time = time.time() + total_seconds
             st.session_state.timer_running = True
@@ -262,7 +296,7 @@ for idx, minutes in enumerate((3, 5, 10)):
 
 pause_button = st.button("Pause Timer")
 if pause_button and st.session_state.timer_running:
-    if st.session_state.mode == MODE_COUNTDOWN and st.session_state.end_time is not None:
+    if st.session_state.mode in (MODE_COUNTDOWN, MODE_POMODORO) and st.session_state.end_time is not None:
         st.session_state.paused_remaining = max(0, int(st.session_state.end_time - time.time()))
         st.session_state.end_time = None
         st.session_state.timer_running = False
@@ -275,7 +309,7 @@ if pause_button and st.session_state.timer_running:
 
 resume_button = st.button("Resume Timer")
 if resume_button and st.session_state.timer_paused:
-    if st.session_state.mode == MODE_COUNTDOWN:
+    if st.session_state.mode in (MODE_COUNTDOWN, MODE_POMODORO):
         st.session_state.end_time = time.time() + st.session_state.paused_remaining
         st.session_state.timer_running = True
         st.session_state.timer_paused = False
@@ -289,20 +323,36 @@ if st.button("Reset Timer"):
     st.session_state.countdown_duration = 0
 
 if st.session_state.timer_running:
-    if st.session_state.mode == MODE_COUNTDOWN and st.session_state.end_time is not None:
+    if st.session_state.mode in (MODE_COUNTDOWN, MODE_POMODORO) and st.session_state.end_time is not None:
         remaining = max(0, int(st.session_state.end_time - time.time()))
         duration = max(1, st.session_state.countdown_duration)
         progress = 1 - (remaining / duration)
-        st.metric("Remaining time", format_seconds(remaining))
+        metric_label = (
+            f"{st.session_state.pomodoro_phase} time"
+            if st.session_state.mode == MODE_POMODORO
+            else "Remaining time"
+        )
+        st.metric(metric_label, format_seconds(remaining))
         st.progress(max(0.0, min(progress, 1.0)))
         st.info(get_timer_message(remaining, duration))
 
         if remaining == 0:
-            st.session_state.timer_running = False
-            st.session_state.timer_paused = False
-            st.session_state.end_time = None
-            st.balloons()
-            st.success("Time is up! 🎉")
+            if st.session_state.mode == MODE_POMODORO:
+                if st.session_state.pomodoro_phase == POMODORO_WORK:
+                    st.session_state.pomodoro_phase = POMODORO_BREAK
+                    st.session_state.countdown_duration = st.session_state.pomodoro_break_duration
+                else:
+                    st.session_state.pomodoro_phase = POMODORO_WORK
+                    st.session_state.pomodoro_round += 1
+                    st.session_state.countdown_duration = st.session_state.pomodoro_work_duration
+                st.session_state.end_time = time.time() + st.session_state.countdown_duration
+                st.success(f"{st.session_state.pomodoro_phase} phase started")
+            else:
+                st.session_state.timer_running = False
+                st.session_state.timer_paused = False
+                st.session_state.end_time = None
+                st.balloons()
+                st.success("Time is up! 🎉")
         else:
             time.sleep(0.2)
             st.rerun()
@@ -322,8 +372,15 @@ else:
         remaining = st.session_state.paused_remaining if st.session_state.timer_paused else st.session_state.countdown_duration
         if st.session_state.countdown_duration <= 0:
             remaining = 60
-        st.metric("Remaining time", format_seconds(remaining))
+        metric_label = (
+            f"{st.session_state.pomodoro_phase} time"
+            if st.session_state.mode == MODE_POMODORO
+            else "Remaining time"
+        )
+        st.metric(metric_label, format_seconds(remaining))
         st.progress(0.0)
+        if st.session_state.mode == MODE_POMODORO:
+            st.caption(f"Round {st.session_state.pomodoro_round} · {st.session_state.pomodoro_phase} phase")
         if st.session_state.timer_paused:
             st.warning("Timer paused. Hit resume when you're ready.")
 
