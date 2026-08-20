@@ -69,6 +69,8 @@ if "pomodoro_phase" not in st.session_state:
     st.session_state.pomodoro_phase = POMODORO_WORK
 if "pomodoro_round" not in st.session_state:
     st.session_state.pomodoro_round = 1
+if "pomodoro_completed" not in st.session_state:
+    st.session_state.pomodoro_completed = 0
 if "pomodoro_work_duration" not in st.session_state:
     st.session_state.pomodoro_work_duration = DEFAULT_POMODORO_WORK_MINUTES * 60
 if "pomodoro_break_duration" not in st.session_state:
@@ -113,6 +115,7 @@ def reset_timer_state() -> None:
     st.session_state.paused_elapsed = 0
     st.session_state.pomodoro_phase = POMODORO_WORK
     st.session_state.pomodoro_round = 1
+    st.session_state.pomodoro_completed = 0
 
 
 def get_timer_message(remaining_seconds: int, total_seconds: int) -> str:
@@ -128,6 +131,20 @@ def get_timer_message(remaining_seconds: int, total_seconds: int) -> str:
     if progress >= 0.25:
         return "Steady pace"
     return "Nice start"
+
+
+def advance_pomodoro_phase() -> None:
+    if st.session_state.pomodoro_phase == POMODORO_WORK:
+        st.session_state.pomodoro_phase = POMODORO_BREAK
+        st.session_state.countdown_duration = st.session_state.pomodoro_break_duration
+    else:
+        st.session_state.pomodoro_phase = POMODORO_WORK
+        st.session_state.pomodoro_round += 1
+        st.session_state.countdown_duration = st.session_state.pomodoro_work_duration
+    st.session_state.end_time = time.time() + st.session_state.countdown_duration
+    st.session_state.timer_running = True
+    st.session_state.timer_paused = False
+    st.session_state.paused_remaining = 0
 
 
 def get_current_time_in_timezone(timezone_name: str) -> datetime:
@@ -255,6 +272,7 @@ if submitted:
     if st.session_state.mode == MODE_POMODORO:
         st.session_state.pomodoro_phase = POMODORO_WORK
         st.session_state.pomodoro_round = 1
+        st.session_state.pomodoro_completed = 0
         total_seconds = get_total_seconds(minutes, 0)
         st.session_state.pomodoro_work_duration = total_seconds
         st.session_state.pomodoro_break_duration = get_total_seconds(seconds, 0)
@@ -318,6 +336,11 @@ if resume_button and st.session_state.timer_paused:
         st.session_state.timer_running = True
         st.session_state.timer_paused = False
 
+if st.session_state.mode == MODE_POMODORO:
+    skip_button = st.button("Skip phase")
+    if skip_button and st.session_state.timer_running:
+        advance_pomodoro_phase()
+
 if st.button("Reset Timer"):
     reset_timer_state()
     st.session_state.countdown_duration = 0
@@ -339,13 +362,8 @@ if st.session_state.timer_running:
         if remaining == 0:
             if st.session_state.mode == MODE_POMODORO:
                 if st.session_state.pomodoro_phase == POMODORO_WORK:
-                    st.session_state.pomodoro_phase = POMODORO_BREAK
-                    st.session_state.countdown_duration = st.session_state.pomodoro_break_duration
-                else:
-                    st.session_state.pomodoro_phase = POMODORO_WORK
-                    st.session_state.pomodoro_round += 1
-                    st.session_state.countdown_duration = st.session_state.pomodoro_work_duration
-                st.session_state.end_time = time.time() + st.session_state.countdown_duration
+                    st.session_state.pomodoro_completed += 1
+                advance_pomodoro_phase()
                 st.success(f"{st.session_state.pomodoro_phase} phase started")
             else:
                 st.session_state.timer_running = False
@@ -380,7 +398,11 @@ else:
         st.metric(metric_label, format_seconds(remaining))
         st.progress(0.0)
         if st.session_state.mode == MODE_POMODORO:
-            st.caption(f"Round {st.session_state.pomodoro_round} · {st.session_state.pomodoro_phase} phase")
+            stats_col1, stats_col2 = st.columns(2)
+            with stats_col1:
+                st.caption(f"Round {st.session_state.pomodoro_round}")
+            with stats_col2:
+                st.caption(f"Focus sessions: {st.session_state.pomodoro_completed}")
         if st.session_state.timer_paused:
             st.warning("Timer paused. Hit resume when you're ready.")
 
