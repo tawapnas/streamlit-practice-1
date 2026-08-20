@@ -75,6 +75,10 @@ if "pomodoro_work_duration" not in st.session_state:
     st.session_state.pomodoro_work_duration = DEFAULT_POMODORO_WORK_MINUTES * 60
 if "pomodoro_break_duration" not in st.session_state:
     st.session_state.pomodoro_break_duration = DEFAULT_POMODORO_BREAK_MINUTES * 60
+if "pomodoro_focus_goal" not in st.session_state:
+    st.session_state.pomodoro_focus_goal = 4
+if "pomodoro_tasks" not in st.session_state:
+    st.session_state.pomodoro_tasks = ""
 if "theme" not in st.session_state:
     st.session_state.theme = TIMER_THEMES[0]
 if "theme_mode" not in st.session_state:
@@ -340,6 +344,34 @@ if st.session_state.mode == MODE_POMODORO:
     skip_button = st.button("Skip phase")
     if skip_button and st.session_state.timer_running:
         advance_pomodoro_phase()
+
+    st.subheader("Focus toolkit")
+    goal_col, progress_col = st.columns(2)
+    with goal_col:
+        st.number_input(
+            "Daily focus goal",
+            min_value=1,
+            max_value=20,
+            step=1,
+            key="pomodoro_focus_goal",
+        )
+    with progress_col:
+        completed = st.session_state.pomodoro_completed
+        goal = st.session_state.pomodoro_focus_goal
+        st.metric("Focus progress", f"{min(completed, goal)}/{goal}")
+        st.progress(min(completed / goal, 1.0))
+
+    st.text_area(
+        "Task list",
+        key="pomodoro_tasks",
+        height=100,
+        placeholder="Add one task per line...",
+    )
+    tasks = [task.strip() for task in st.session_state.pomodoro_tasks.splitlines() if task.strip()]
+    if tasks:
+        st.caption("Check off tasks as you complete them")
+        for task_index, task in enumerate(tasks):
+            st.checkbox(task, key=f"pomodoro_task_{task_index}_{task}")
 
 if st.button("Reset Timer"):
     reset_timer_state()
